@@ -195,7 +195,7 @@ def _load_csv_to_dict(csv_tracks_file):
         reader = csv.DictReader(fl, dialect=dialect)
 
         for cell in reader:
-            cells[cell['cell_id']] = cell
+            cells[int(cell['cell_id'])] = cell
 
     return cells
 

@@ -35,6 +35,9 @@ Use
 ---
 Have a look at the jupyter notebook [examples](examples) or look at the [run scripts](run_scripts) directly.
 
+For Biohub Zarr v3 images and GEFF annotations, see the
+[Biohub I/O smoke test](examples/biohub/README.md).
+
 
 Contributing
 --------------

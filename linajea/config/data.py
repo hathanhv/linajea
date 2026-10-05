@@ -10,6 +10,7 @@ from typing import List
 
 import attr
 import daisy
+from linajea.biohub_io import BiohubImage, is_biohub_zarr
 
 from .utils import (ensure_cls,
                     _check_nested_nd_shape,
@@ -54,6 +55,13 @@ class DataFileConfig:
     def __attrs_post_init__(self):
         """Read voxel size, ROI and attributes from file
         """
+        if is_biohub_zarr(self.filename):
+            image = BiohubImage(self.filename, self.array or "0")
+            self.array = image.array_name
+            self.file_voxel_size = image.voxel_size
+            self.file_roi = DataROIConfig(
+                offset=image.roi_offset, shape=image.roi_shape)
+            return
         dataset = daisy.open_ds(self.filename, self.array)
 
         self.file_voxel_size = dataset.voxel_size

@@ -162,7 +162,7 @@ class TracksSource(BatchProvider):
                 location,
                 # parent_id
                 track_info["parent_id"]
-                if track_info["parent_id"] > 0 else None,
+                if track_info["parent_id"] >= 0 else None,
                 # track_id
                 track_info["track_id"],
                 # optional attributes, e.g. radius

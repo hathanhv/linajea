@@ -12,6 +12,8 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 import daisy
 import gunpowder as gp
+from linajea.biohub_io import BiohubImage, is_biohub_zarr
+from linajea.biohub_gp import BiohubTracksSource, image_source
 
 from linajea.gunpowder_nodes import (
     AddMovementVectors,
@@ -473,8 +475,11 @@ def get_sources(config, raw, tracks, center_tracks, data_sources,
     for ds in data_sources:
         filename_data = ds.datafile.filename
         filename_tracks = ds.tracksfile
-        file_attrs = daisy.open_ds(
-            filename_data, ds.datafile.array, 'r').data.attrs
+        if is_biohub_zarr(filename_data):
+            file_attrs = BiohubImage(filename_data, ds.datafile.array).attrs
+        else:
+            file_attrs = daisy.open_ds(
+                filename_data, ds.datafile.array, 'r').data.attrs
         voxel_size = gp.Coordinate(ds.voxel_size)
         logger.info("loading data %s (val: %s)", filename_data, val)
         logger.info("creating source: %s (%s, %s), divisions?: %s",
@@ -492,7 +497,7 @@ def get_sources(config, raw, tracks, center_tracks, data_sources,
                 interpolatable=True,
                 voxel_size=voxel_size)
         }
-        file_source = gp.ZarrSource(
+        file_source = image_source(
             filename_data,
             datasets=datasets,
             array_specs=array_specs)
@@ -522,6 +527,8 @@ def get_sources(config, raw, tracks, center_tracks, data_sources,
                 center_tracks,
                 filename_tracks,
                 limit_to_roi,
+                scale=tuple(ds.voxel_size)
+                if filename_tracks.endswith(".geff") else 1.0,
                 use_radius=config.train.use_radius,
                 padding=padding) +
             random_location(
@@ -533,7 +540,7 @@ def get_sources(config, raw, tracks, center_tracks, data_sources,
 
         # if division nodes should be sampled more often
         if config.train.augment.divisions != 0.0:
-            file_sourceD = gp.ZarrSource(
+            file_sourceD = image_source(
                 filename_data,
                 datasets=datasets,
                 array_specs=array_specs)
@@ -553,6 +560,8 @@ def get_sources(config, raw, tracks, center_tracks, data_sources,
                     center_tracks,
                     filename_tracks,
                     limit_to_roi,
+                    scale=tuple(ds.voxel_size)
+                    if filename_tracks.endswith(".geff") else 1.0,
                     use_radius=config.train.use_radius,
                     padding=padding,
                     attr_filter={"div_state": 2}) +
@@ -621,23 +630,23 @@ def merge_sources(
         Only consider cells for the `center_tracks` Graph that have
         attr=value set for each element in attr_filter.
     """
+    def make_tracks_source(key, attributes=None):
+        if str(csv_tracks_file).lower().endswith(".geff"):
+            return BiohubTracksSource(
+                csv_tracks_file, key, voxel_size=scale,
+                points_spec=gp.GraphSpec(roi=roi),
+                use_radius=use_radius, attr_filter=attributes)
+        return TracksSource(
+            csv_tracks_file, key, points_spec=gp.GraphSpec(roi=roi),
+            scale=scale, use_radius=use_radius,
+            attr_filter=attributes or {})
+
     return (
         (raw,
          # tracks
-         TracksSource(
-             csv_tracks_file,
-             tracks,
-             points_spec=gp.GraphSpec(roi=roi),
-             scale=scale,
-             use_radius=use_radius),
+         make_tracks_source(tracks),
          # center tracks
-         TracksSource(
-             csv_tracks_file,
-             center_tracks,
-             points_spec=gp.GraphSpec(roi=roi),
-             scale=scale,
-             use_radius=use_radius,
-             attr_filter=attr_filter),
+         make_tracks_source(center_tracks, attr_filter),
          ) +
         gp.MergeProvider() +
         # not None padding works in combination with ensure_nonempty in

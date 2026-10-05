@@ -12,6 +12,8 @@ import torch
 
 import daisy
 import gunpowder as gp
+from linajea.biohub_io import BiohubImage, is_biohub_zarr
+from linajea.biohub_gp import image_source
 
 from linajea.config import TrackingConfig
 from linajea.gunpowder_nodes import (
@@ -65,13 +67,19 @@ def predict(config):
         chunk_request.add(movement_vectors, output_size)
 
     sample = config.inference_data.data_source.datafile.filename
-    sample_attrs = daisy.open_ds(
-        sample,
-        config.inference_data.data_source.datafile.array, 'r').data.attrs
+    if is_biohub_zarr(sample):
+        image = BiohubImage(
+            sample, config.inference_data.data_source.datafile.array)
+        sample_attrs = image.attrs
+        sample_shape = image.roi_shape
+    else:
+        sample_attrs = daisy.open_ds(
+            sample,
+            config.inference_data.data_source.datafile.array, 'r').data.attrs
+        sample_shape = daisy.open_ds(
+            sample,
+            config.inference_data.data_source.datafile.array).roi.get_shape()
     sample_mask = os.path.splitext(sample)[0] + "_mask.hdf"
-    sample_shape = daisy.open_ds(
-        sample,
-        config.inference_data.data_source.datafile.array).roi.get_shape()
 
     if "z_range" in sample_attrs:
         z_range = sample_attrs['z_range']
@@ -86,7 +94,7 @@ def predict(config):
     else:
         mask = None
 
-    source = gp.ZarrSource(
+    source = image_source(
         sample,
         datasets={
             raw: config.inference_data.data_source.datafile.array
