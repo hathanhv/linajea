@@ -5,8 +5,9 @@ does not copy the input dataset. The spatial coordinate unit passed to Linajea
 is **1/32 micrometer**; the sample spacing `1.625, 0.40625, 0.40625` micrometer
 therefore becomes the exact integer Gunpowder spacing `52, 13, 13`.
 
-Create a Kaggle notebook, attach the competition data, and run these cells
-with Internet enabled. Clone the branch or, for a reproducible run, replace
+You can upload [`check_biohub_io_kaggle.ipynb`](check_biohub_io_kaggle.ipynb)
+to Kaggle or copy its cells into a new notebook. Attach the competition data
+and run with Internet enabled. Clone the branch or, for a reproducible run, replace
 `biohub-io` with the commit hash you pushed:
 
 ```python
