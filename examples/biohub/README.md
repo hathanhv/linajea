@@ -45,5 +45,34 @@ image root metadata. Values for spatial radii and distance thresholds in
 Linajea config must also use 1/32 micrometer units. Do not reuse the physical
 distance values from the MSKCC examples unchanged.
 
-The full training and tracking pipeline still needs its other dependencies,
-including legacy Daisy, MongoDB, and `pylp`; this I/O check does not test them.
+## Short training check
+
+Upload [`train_biohub_smoke_kaggle.ipynb`](train_biohub_smoke_kaggle.ipynb)
+to Kaggle, attach the same competition data, and enable Internet and a GPU.
+After cloning your pushed `biohub-io` branch, it installs the training
+dependencies and runs two iterations on the annotated sample
+`6bba_05b6850b`. The notebook prints the exact commit, iteration losses,
+and the checkpoint path. Training output, including the resolved config,
+is written to `/kaggle/working/biohub_train_smoke`; the competition Input is
+read-only.
+
+For a shell run, install `requirements-biohub-io.txt` and
+`requirements-biohub-train.txt`, then install the pinned Daisy and UNet
+packages without their legacy dependencies:
+
+```sh
+python -m pip install -r requirements-biohub-io.txt
+python -m pip install -r requirements-biohub-train.txt
+python -m pip install --no-deps "git+https://github.com/abred/daisy@ab7b82054126a50ab4ad5dcf2ef885b02d33aab8"
+python -m pip install --no-deps "git+https://github.com/Kainmueller-Lab/funlib.learn.torch@36ef666d16bddda0bf3146d4c0efbe9b95c8463d"
+python -m pip install -e . --no-deps
+python -m run_scripts.train_biohub_smoke \
+  --data-dir /kaggle/input/competitions/biohub-cell-tracking-during-development/train \
+  --sample 6bba_05b6850b \
+  --output-dir /kaggle/working/biohub_train_smoke \
+  --iterations 2
+```
+
+This check covers sampling, label rasterization, forward and backward passes,
+and a finite checkpoint. It does not measure tracking quality. Full inference,
+solver, and submission still require separate work.

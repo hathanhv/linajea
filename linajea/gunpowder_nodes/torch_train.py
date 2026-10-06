@@ -123,6 +123,17 @@ class TorchTrainExt(Train):
             spawn_subprocess=spawn_subprocess
         )
 
+        # Gunpowder 1.5 prefixes loss argument names with "loss_" in Train.
+        # This extension calls the loss itself, so retain the original names
+        # and keep the loss arrays in GenericTrain's upstream request.
+        self.loss_inputs = dict(loss_inputs)
+        self.inputs = {
+            **{k: v for k, v in inputs.items()
+               if v not in outputs.values()},
+            **{k: v for k, v in loss_inputs.items()
+               if v not in outputs.values()},
+        }
+
         self.val_log_step = val_log_step
         self.use_auto_mixed_precision = use_auto_mixed_precision
         self.use_swa = use_swa

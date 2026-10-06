@@ -231,8 +231,15 @@ class LossWrapper(torch.nn.Module):
             gt_movement_vectors_cropped = None
             maxima_in_cell_mask = None
 
-        # non-cropped
-        if self.config.model.cell_indicator_weighted:
+        # Sparse annotations establish background only near labeled cells.
+        # Keep the center peaks as labels even when no parent was annotated.
+        if self.config.general.sparse:
+            weight = (gt_cell_indicator >
+                      self.config.model.cell_indicator_cutoff).float()
+            if cell_mask is not None:
+                weight = torch.maximum(weight,
+                                       cell_mask.reshape(output_shape_1).float())
+        elif self.config.model.cell_indicator_weighted:
             cond = gt_cell_indicator < self.config.model.cell_indicator_cutoff
             weight = torch.where(cond,
                                  self.config.model.cell_indicator_weighted,
@@ -240,7 +247,8 @@ class LossWrapper(torch.nn.Module):
         else:
             weight = torch.tensor(1.0)
 
-        cell_indicator_loss = self.ci_loss(
+        ci_loss_fn = self.pv_loss if self.config.general.sparse else self.ci_loss
+        cell_indicator_loss = ci_loss_fn(
             # l=1, d, h, w
             gt_cell_indicator,
             # l=1, d, h, w

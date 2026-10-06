@@ -332,9 +332,6 @@ def train(config):
     inputs = {
         'raw': raw,
     }
-    if not config.model.train_only_cell_indicator:
-        inputs['cell_mask'] = cell_mask
-        inputs['gt_movement_vectors'] = movement_vectors
 
     outputs = {
         0: pred_cell_indicator,
@@ -441,12 +438,14 @@ def train(config):
         with logging_redirect_tqdm():
             for i in tqdm(range(trained_until, config.train.max_iterations)):
                 start = time.time()
-                pipeline.request_batch(request)
+                batch = pipeline.request_batch(request)
                 time_of_iteration = time.time() - start
+                if not np.isfinite(float(batch.loss)):
+                    raise FloatingPointError(
+                        f"Non-finite training loss at iteration {i + 1}")
 
-                logger.info(
-                    "Batch: iteration=%d, time=%f",
-                    i, time_of_iteration)
+                logger.info("Batch: iteration=%d, loss=%f, time=%f",
+                            i + 1, float(batch.loss), time_of_iteration)
 
 
 def get_sources(config, raw, tracks, center_tracks, data_sources,

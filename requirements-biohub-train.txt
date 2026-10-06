@@ -1,0 +1,6 @@
+# Install after requirements-biohub-io.txt, with the pinned Daisy and UNet
+# packages described in examples/biohub/README.md.
+toml
+pymongo
+tensorboard
+funlib.math==0.1

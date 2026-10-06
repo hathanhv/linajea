@@ -1,0 +1,47 @@
+# Dataset paths and iteration count are filled by run_scripts/train_biohub_smoke.py.
+[general]
+logging = 20
+seed = 42
+setup_dir = "biohub_train_smoke"
+sparse = true
+
+[model]
+train_input_shape = [7, 40, 148, 148]
+predict_input_shape = [7, 40, 148, 148]
+num_fmaps = 4
+upsampling = "sep_transposed_conv"
+nms_window_shape = [3, 9, 9]
+# No cell_indicator_weighted: unlabeled Biohub cells are not background.
+
+[optimizerTorch]
+optimizer = "Adam"
+[optimizerTorch.kwargs]
+lr = 0.0001
+
+[train]
+max_iterations = 2
+checkpoint_stride = 1
+snapshot_stride = 1000
+profiling_stride = 1000
+cache_size = 1
+use_auto_mixed_precision = false
+# Spatial values use 1/32 micrometer: 64=2 um, 384=12 um.
+object_radius = [0.1, 64.0, 64.0, 64.0]
+move_radius = 384
+rasterize_radius = [0.1, 64.0, 32.0, 32.0]
+
+[train.job]
+num_workers = 1
+run_on = "local"
+
+[train.normalization]
+type = "percminmax"
+perc_min = "q001"
+perc_max = "q099"
+
+[train_data]
+[[train_data.data_sources]]
+tracksfile = "__GEFF__"
+[train_data.data_sources.datafile]
+filename = "__ZARR__"
+array = "0"
