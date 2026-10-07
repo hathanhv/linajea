@@ -21,16 +21,21 @@ def main():
     parser.add_argument("--sample", default="6bba_05b6850b")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--iterations", type=int, default=2)
+    parser.add_argument("--tracksfile", type=Path,
+                        help="Visible GEFF to use instead of the original annotations")
+    parser.add_argument("--checkpoint-stride", type=int, default=1)
     parser.add_argument("--allow-cpu", action="store_true",
                         help="Permit a slow CPU-only run for debugging")
     args = parser.parse_args()
     if args.iterations < 1:
         parser.error("--iterations must be positive")
+    if args.checkpoint_stride < 1:
+        parser.error("--checkpoint-stride must be positive")
     if not torch.cuda.is_available() and not args.allow_cpu:
         parser.error("No CUDA GPU detected. Enable a Kaggle GPU or pass --allow-cpu")
 
     image_path = args.data_dir / f"{args.sample}.zarr"
-    graph_path = args.data_dir / f"{args.sample}.geff"
+    graph_path = args.tracksfile or args.data_dir / f"{args.sample}.geff"
     if not image_path.is_dir() or not graph_path.is_dir():
         parser.error(f"Expected paired stores: {image_path} and {graph_path}")
     image = BiohubImage(image_path)
@@ -42,6 +47,7 @@ def main():
 
     config_dict = toml.load(TEMPLATE)
     config_dict["train"]["max_iterations"] = args.iterations
+    config_dict["train"]["checkpoint_stride"] = args.checkpoint_stride
     source = config_dict["train_data"]["data_sources"][0]
     source["tracksfile"] = str(graph_path.resolve())
     source["datafile"]["filename"] = str(image_path.resolve())

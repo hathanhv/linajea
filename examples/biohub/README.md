@@ -76,3 +76,40 @@ python -m run_scripts.train_biohub_smoke \
 This check covers sampling, label rasterization, forward and backward passes,
 and a finite checkpoint. It does not measure tracking quality. Full inference,
 solver, and submission still require separate work.
+
+## Random node hide pilot
+
+Upload [`random_hide_kaggle.ipynb`](random_hide_kaggle.ipynb) to Kaggle after
+pushing this branch. Attach the Biohub competition data, enable Internet and a
+GPU, and run all cells. To pin a pushed revision, set `PINNED_COMMIT` in the
+settings cell to its SHA. The notebook checks out and records the resolved
+commit in `commit.txt`, then uses sample `6bba_05b6850b`, seed 42,
+and a target hide rate of 20%. The annotation-rich evaluation ROI is selected
+before hiding. Its 20 frames and `32 × 128 × 128` voxels are for prediction
+and evaluation; training samples the visible graph over the full 100 frames.
+
+The split writes `visible.geff` with the original node IDs and only edges
+whose endpoints remain visible. It also writes `split.json` with the hidden
+IDs, held-out edges, actual hide rate, and ROI. The training config points
+only to `visible.geff`. The original GEFF is read during splitting and
+evaluation, never by the training or inference stages. Hidden centers within
+the 2 µm training mask radius are grouped before splitting and checked for
+overlap afterwards.
+
+The notebook trains for 2,000 iterations and saves checkpoints at iterations
+500, 1000, 1500, and 2000. Inference uses the training quantile
+normalization, non-overlapping output tiles, center NMS, predicted movement
+vectors, and SciPy MILP with Linajea's basic forest constraints and a fixed
+example parameter set. The final cell displays the same raw image projection
+in two panels: visible/hidden GT on the left and the selected reconstructed
+graph on the right. An optional interactive 3D view is saved as HTML.
+
+All outputs are under `/kaggle/working/biohub_random_hide/`: `train/config.toml`,
+`train/train.log`, checkpoints, `prediction/pred_nodes.csv`,
+`prediction/pred_edges.csv`, candidate CSVs, `prediction/reconstruction.json`,
+`evaluation/metrics.json`, `plots/comparison.png`, and
+`plots/comparison_3d.html`. Use Kaggle **Save Version / Save & Run All** to
+retain them as notebook outputs. The reported hidden-confirmed pseudo-label
+rate is a lower bound: an unmatched prediction can be a real cell absent from
+Biohub's sparse GT. A 2,000-iteration pilot validates the workflow and does
+not establish final reconstruction quality.
