@@ -113,3 +113,30 @@ retain them as notebook outputs. The reported hidden-confirmed pseudo-label
 rate is a lower bound: an unmatched prediction can be a real cell absent from
 Biohub's sparse GT. A 2,000-iteration pilot validates the workflow and does
 not establish final reconstruction quality.
+
+### Re-solve an empty graph without retraining
+
+If candidate nodes exist but the example ILP weights select no cells, push the
+updated `biohub-io` branch, then **copy the code cells** from
+[`calibrate_ilp_kaggle.ipynb`](calibrate_ilp_kaggle.ipynb) into the existing
+Kaggle pilot notebook and run them in the same live session. A separate Kaggle
+notebook has its own `/kaggle/working` and cannot see the pilot outputs by
+default. Keep `/kaggle/working/biohub_random_hide` intact. The follow-up cells
+fetch the new commit, reuse the cached candidate CSVs,
+and never reopens the training checkpoint or repeats tiled inference.
+
+Calibration reads only `visible.geff` and the ROI coordinates from `split.json`.
+It tries a fixed grid of node selection constants and track appearance costs;
+the score weight, edge weight, division cost, and ILP constraints stay fixed.
+At a 4 µm match distance, it selects the smallest graph retaining at least
+80% of the visible node and edge matches supported by the candidate graph.
+Unmatched candidates are not counted as false positives. If the grid cannot
+meet both targets, the report says so and chooses the best visible coverage
+found in that grid.
+
+The selected costs, all 36 trials, and the graph are saved under
+`prediction_calibrated/`. Hidden-GT evaluation and comparison figures are
+saved separately under `evaluation_calibrated/` and `plots_calibrated/`.
+Original pilot outputs are preserved. Since the first hidden-GT result was
+already inspected, this follow-up is **exploratory** and should not be reported
+as an independent test of pseudo-label quality.

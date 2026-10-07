@@ -167,8 +167,10 @@ def candidate_edges(nodes, max_parent_distance_um=12.0, max_parents=3):
     return result
 
 
-def solve_basic_ilp(nodes, edges, time_limit=300):
-    """Linajea basic binary-forest constraints with its example cost weights."""
+def solve_basic_ilp(nodes, edges, time_limit=300, selection_constant=12.0,
+                    weight_node_score=17.0, track_cost=7.0,
+                    division_cost=1.0, edge_weight=0.35):
+    """Linajea basic binary-forest constraints with configurable costs."""
     n, m = len(nodes), len(edges)
     if not n:
         return [], [], {"solver_status": "no_candidates"}
@@ -178,11 +180,11 @@ def solve_basic_ilp(nodes, edges, time_limit=300):
     costs = np.zeros(edge_base + m, dtype=float)
     first_t = min(int(node["t"]) for node in nodes)
     for i, node in enumerate(nodes):
-        costs[i] = 12.0 - 17.0 * float(node["score"])
-        costs[n + i] = 0.0 if int(node["t"]) == first_t else 7.0
-        costs[2 * n + i] = 1.0
+        costs[i] = selection_constant - weight_node_score * float(node["score"])
+        costs[n + i] = 0.0 if int(node["t"]) == first_t else track_cost
+        costs[2 * n + i] = division_cost
     for e, edge in enumerate(edges):
-        costs[edge_base + e] = 0.35 * float(edge["prediction_distance_um"])
+        costs[edge_base + e] = edge_weight * float(edge["prediction_distance_um"])
     incoming, outgoing = [[] for _ in nodes], [[] for _ in nodes]
     for e, edge in enumerate(edges):
         p, c = ids[int(edge["source_id"])], ids[int(edge["target_id"])]
