@@ -140,3 +140,22 @@ saved separately under `evaluation_calibrated/` and `plots_calibrated/`.
 Original pilot outputs are preserved. Since the first hidden-GT result was
 already inspected, this follow-up is **exploratory** and should not be reported
 as an independent test of pseudo-label quality.
+
+### Compare saved training checkpoints
+
+After the calibrated pilot, copy the code cells from
+[`compare_checkpoints_kaggle.ipynb`](compare_checkpoints_kaggle.ipynb) into the
+same live Kaggle notebook and run only those cells. The comparison uses the
+saved checkpoints at iterations 500, 1000, 1500, and 2000. It reuses the
+2,000-iteration candidates and calibrated graph, so only the first three
+checkpoints need tiled inference. All four are evaluated on the same ROI with
+the same 2, 4, and 7 µm matching thresholds. The calibrated ILP costs from
+iteration 2000 are held fixed when making the earlier selected graphs.
+
+The final cell shows a row per iteration with candidate and selected counts,
+visible and hidden cell recovery, and hidden edge recovery at 4 µm. Complete
+metrics and a machine-readable report are saved in `checkpoint_comparison/`.
+Use the **visible candidate recall trend** as a training diagnostic; hidden
+metrics remain exploratory. If candidate coverage is still rising at iteration
+2000, continue training to later checkpoints. If it plateaus, inspect
+sampling, candidate threshold, and model capacity before adding iterations.
