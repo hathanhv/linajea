@@ -21,6 +21,8 @@ def main():
     parser.add_argument("--sample", default="6bba_05b6850b")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--iterations", type=int, default=2)
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Seed for model initialization and training sampling")
     parser.add_argument("--tracksfile", type=Path,
                         help="Visible GEFF to use instead of the original annotations")
     parser.add_argument("--checkpoint-stride", type=int, default=1)
@@ -33,6 +35,9 @@ def main():
         parser.error("--checkpoint-stride must be positive")
     if not torch.cuda.is_available() and not args.allow_cpu:
         parser.error("No CUDA GPU detected. Enable a Kaggle GPU or pass --allow-cpu")
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
 
     image_path = args.data_dir / f"{args.sample}.zarr"
     graph_path = args.tracksfile or args.data_dir / f"{args.sample}.geff"
@@ -46,6 +51,7 @@ def main():
         parser.error("The image is missing 0.01/0.99 quantiles")
 
     config_dict = toml.load(TEMPLATE)
+    config_dict["general"]["seed"] = args.seed
     config_dict["train"]["max_iterations"] = args.iterations
     config_dict["train"]["checkpoint_stride"] = args.checkpoint_stride
     source = config_dict["train_data"]["data_sources"][0]

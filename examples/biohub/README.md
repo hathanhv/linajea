@@ -141,21 +141,49 @@ Original pilot outputs are preserved. Since the first hidden-GT result was
 already inspected, this follow-up is **exploratory** and should not be reported
 as an independent test of pseudo-label quality.
 
-### Compare saved training checkpoints
+### Compare training checkpoints in a fresh Kaggle session
 
-After the calibrated pilot, copy the code cells from
-[`compare_checkpoints_kaggle.ipynb`](compare_checkpoints_kaggle.ipynb) into the
-same live Kaggle notebook and run only those cells. The comparison uses the
-saved checkpoints at iterations 500, 1000, 1500, and 2000. It reuses the
-2,000-iteration candidates and calibrated graph, so only the first three
-checkpoints need tiled inference. All four are evaluated on the same ROI with
-the same 2, 4, and 7 µm matching thresholds. The calibrated ILP costs from
-iteration 2000 are held fixed when making the earlier selected graphs.
+Upload [`compare_checkpoints_kaggle.ipynb`](compare_checkpoints_kaggle.ipynb)
+as a **new standalone Kaggle notebook**, attach the Biohub competition data,
+enable GPU and Internet, and run all cells. This version starts from an empty
+`/kaggle/working`: it clones the fork, creates the same seeded visible/hidden
+split, trains for 2,000 iterations, and saves checkpoints at 500, 1000, 1500,
+and 2000. It then creates and calibrates the 2,000-iteration graph. The
+comparison reuses those 2,000-iteration candidates and runs tiled inference
+for only the first three checkpoints. All four are evaluated on the same ROI
+with the same 2, 4, and 7 µm matching thresholds. The calibrated ILP costs
+from iteration 2000 are held fixed for the earlier selected graphs.
 
 The final cell shows a row per iteration with candidate and selected counts,
 visible and hidden cell recovery, and hidden edge recovery at 4 µm. Complete
-metrics and a machine-readable report are saved in `checkpoint_comparison/`.
+metrics and a machine-readable report are saved in
+`/kaggle/working/biohub_random_hide/checkpoint_comparison/`.
 Use the **visible candidate recall trend** as a training diagnostic; hidden
 metrics remain exploratory. If candidate coverage is still rising at iteration
 2000, continue training to later checkpoints. If it plateaus, inspect
 sampling, candidate threshold, and model capacity before adding iterations.
+
+### Three 1500-iteration seeds and a full GEFF export
+
+Upload [`multiseed_1500_full_geff_kaggle.ipynb`](multiseed_1500_full_geff_kaggle.ipynb)
+to a new Kaggle notebook, attach the competition train data, and enable GPU
+and Internet. Push the notebook and Python changes to `biohub-io` first. The
+notebook runs three fresh 1500-iteration experiments with hide seeds 42, 43,
+and 44, each in a separate output folder under
+`/kaggle/working/biohub_random_hide_multiseed/`. Its table compares ROI
+candidate and selected graph recovery at 4 µm. Training uses each seed's
+visible GEFF only. Loss logs, checkpoints, split manifests, calibration grids,
+and metrics are saved for every seed.
+
+The full-sequence export always uses seed 42, fixed before reading hidden
+results. It streams inference across all 100 frames of sample
+`6bba_05b6850b`, solves disconnected candidate components with the
+visible-only calibrated ILP costs, and writes
+`seed_42/full_export/predicted_full.geff` plus
+`seed_42/full_export/predicted_full_geff.zip`. The `.geff` is a Zarr directory;
+download and extract the ZIP before opening that folder with the
+[`napari-geff`](https://github.com/live-image-tracking-tools/napari-geff)
+plugin. Open the matching Biohub `.zarr` image separately to overlay tracks.
+This export is a prediction for the **one training sample**; it is not an
+independent test or a Kaggle submission. Full-volume inference is much longer
+than ROI inference and reports progress every five frames.

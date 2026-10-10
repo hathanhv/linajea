@@ -169,7 +169,8 @@ def candidate_edges(nodes, max_parent_distance_um=12.0, max_parents=3):
 
 def solve_basic_ilp(nodes, edges, time_limit=300, selection_constant=12.0,
                     weight_node_score=17.0, track_cost=7.0,
-                    division_cost=1.0, edge_weight=0.35):
+                    division_cost=1.0, edge_weight=0.35,
+                    first_frame=None):
     """Linajea basic binary-forest constraints with configurable costs."""
     n, m = len(nodes), len(edges)
     if not n:
@@ -178,7 +179,8 @@ def solve_basic_ilp(nodes, edges, time_limit=300, selection_constant=12.0,
     # Variables: selected node, appearance, division, selected edge.
     edge_base = 3 * n
     costs = np.zeros(edge_base + m, dtype=float)
-    first_t = min(int(node["t"]) for node in nodes)
+    first_t = (min(int(node["t"]) for node in nodes)
+               if first_frame is None else first_frame)
     for i, node in enumerate(nodes):
         costs[i] = selection_constant - weight_node_score * float(node["score"])
         costs[n + i] = 0.0 if int(node["t"]) == first_t else track_cost
