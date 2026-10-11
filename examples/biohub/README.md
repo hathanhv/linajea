@@ -77,6 +77,26 @@ This check covers sampling, label rasterization, forward and backward passes,
 and a finite checkpoint. It does not measure tracking quality. Full inference,
 solver, and submission still require separate work.
 
+## Eight-sample training and two-sample holdout validation
+
+[`train_validate_8x2_kaggle.ipynb`](train_validate_8x2_kaggle.ipynb) trains
+from scratch on eight full-annotation Biohub samples from embryo `6bba` and
+predicts two held-out samples from embryo `44b6`. The split is selected with
+seed 42 and saved before training; no sample or embryo appears in both groups.
+Here, "full annotation" means all GEFF annotations supplied for each train
+sample; the underlying Biohub ground truth remains sparse. The notebook uses
+16,000 iterations by default and saves checkpoints every 2,000 iterations.
+Edit this number in its setup cell if the Kaggle session cannot finish it.
+
+Validation saves per-sample candidate/selected CSV graphs, predicted GEFF,
+known-cell/edge recovery at 2/4/7 micrometers, and the organizer's official
+tracking metric. The ILP parameters are fixed at 7/7 before validation GT is
+read. Outputs are in `/kaggle/working/biohub_holdout_8x2/`. This is one
+embryo direction; a second run with train and validation embryos swapped is
+needed to assess stability across embryos. The organizer's metric comes from
+[`royerlab/kaggle-cell-tracking-competition`](https://github.com/royerlab/kaggle-cell-tracking-competition),
+pinned to commit `075fc5f5a52d11077f9dc2b074644618f26939e2` in the notebook.
+
 ## Random node hide pilot
 
 Upload [`random_hide_kaggle.ipynb`](random_hide_kaggle.ipynb) to Kaggle after
@@ -187,6 +207,38 @@ plugin. Open the matching Biohub `.zarr` image separately to overlay tracks.
 This export is a prediction for the **one training sample**; it is not an
 independent test or a Kaggle submission. Full-volume inference is much longer
 than ROI inference and reports progress every five frames.
+
+### Test-image CSV export (technical submission smoke test)
+
+Use [`submit_biohub_kaggle.ipynb`](submit_biohub_kaggle.ipynb) after attaching
+a source ZIP and saved checkpoint as Kaggle Inputs. Set `SOURCE_ZIP` and
+`RUN_DIR` in its first code cell to match their mounted folders. The ZIP must
+contain the repository at `linajea/` and include this submission module.
+
+`run_scripts.submit_biohub` reuses a saved checkpoint and resolved training
+config, predicts every `.zarr` in the supplied test directory, solves the
+cached candidate graphs, and writes the competition's node/edge CSV schema.
+It does not need test GEFF annotations. Run it in a Kaggle environment that
+already has this source code, its dependencies, and the checkpoint available:
+
+```bash
+python -m run_scripts.submit_biohub \
+  --data-dir /kaggle/input/competitions/biohub-cell-tracking-during-development/test \
+  --config /kaggle/input/MY-CHECKPOINT/seed_42/train/config.toml \
+  --checkpoint /kaggle/input/MY-CHECKPOINT/seed_42/train/train_net_checkpoint_1500 \
+  --output-dir /kaggle/working/biohub_submission \
+  --device cuda
+```
+
+This writes `/kaggle/working/biohub_submission/submission.csv` and a per-sample
+report. `--sample NAME` performs a one-sample format check and writes
+`smoke_NAME.csv`, which is intentionally incomplete. Cached predictions are
+reused only with the same checkpoint, config, and inference settings. The
+previous seed-42 checkpoint learned from one train sample with 20% GT hidden;
+test embryos are different. Treat a submission from that checkpoint as a
+technical trial, not as a validated generalization result. A Kaggle code
+competition rerun has Internet disabled, so source code, model weights, and
+required dependencies must be attached as notebook inputs before submission.
 
 ### Analyze cached predictions before using pseudo-GT
 
