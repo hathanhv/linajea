@@ -7,6 +7,7 @@ import json
 import numpy as np
 import zarr
 
+from linajea.biohub_edge_audit import audit_temporal_edges
 from linajea.biohub_pseudo_analysis import (anchored_corridor,
                                             analyze_cached,
                                             candidate_frame_diagnostics,
@@ -54,6 +55,30 @@ def test_candidate_cap_is_reported_per_frame():
     assert rows[0]["candidate_count"] == 200
     assert rows[0]["at_candidate_cap"] is True
     assert rows[1]["candidate_count"] == 0
+
+
+def test_temporal_edge_audit_separates_missing_center_from_missing_edge():
+    gt = [{"cell_id": 10 + t, "parent_id": 9 + t if t else -1,
+           "t": t, "z": 52, "y": 130, "x": 130} for t in range(3)]
+    nodes = [{"node_id": 20 + t, "t": t, "z": 1, "y": 10, "x": 10,
+              "score": 0.8} for t in range(3)]
+    edges = [{"source_id": 20, "target_id": 21,
+              "prediction_distance_um": 0.5}]
+    manifest = {"hidden_node_ids": [11],
+                "hidden_edges": [[10, 11], [11, 12]]}
+    predicted, known, localization = audit_temporal_edges(
+        nodes, edges, gt, [gt[0], gt[2]], manifest,
+        "seed_42", "anchor_strict")
+    assert predicted[0]["gt_relation"] == "confirmed_hidden_edge"
+    assert predicted[0]["source_error_um"] == 0
+    assert [row["failure_reason"] for row in known] == [
+        "recovered", "edge_missing_despite_both_centers"]
+    assert localization[1]["hidden_matched"] == 1
+    _, known_missing, _ = audit_temporal_edges(
+        [nodes[0], nodes[2]], [], gt, [gt[0], gt[2]], manifest,
+        "seed_42", "anchor_strict")
+    assert [row["failure_reason"] for row in known_missing] == [
+        "target_center_missing", "source_center_missing"]
 
 
 def test_discovers_multiseed_cached_output():
@@ -148,3 +173,6 @@ def test_cached_analysis_keeps_hidden_gt_out_of_selection():
         assert by_stage["anchor_strict"]["hidden_recovered"] == 3
         assert by_stage["anchor_strict"]["hidden_edge_recovered"] == 4
         assert by_stage["anchor_strict"]["unconfirmed_after_full_gt"] == 0
+        assert (base / "analysis_with_gt" / "predicted_edge_audit.csv").is_file()
+        assert (base / "analysis_with_gt" / "gt_edge_audit.csv").is_file()
+        assert (base / "analysis_with_gt" / "localization_audit.csv").is_file()

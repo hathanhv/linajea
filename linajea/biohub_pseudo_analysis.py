@@ -13,6 +13,9 @@ import numpy as np
 import zarr
 
 from linajea.biohub_full_export import solve_components
+from linajea.biohub_edge_audit import (
+    GT_EDGE_FIELDS, LOCALIZATION_FIELDS, PRED_EDGE_FIELDS,
+    audit_temporal_edges)
 from linajea.biohub_io import read_geff_tracks
 from linajea.biohub_random_hide import match_nodes, read_rows, write_rows
 from linajea.biohub_reconstruct import EDGE_FIELDS, NODE_FIELDS
@@ -330,6 +333,7 @@ def analyze_cached(source_dir, output_dir, gt_dir=None,
 
     # Held-out GT enters only here, after all policies and graphs are fixed.
     summary = []
+    predicted_edge_audit, gt_edge_audit, localization_audit = [], [], []
     for label, payload in outputs.items():
         manifest = payload["manifest"]
         full_gt = None
@@ -372,7 +376,22 @@ def analyze_cached(source_dir, output_dir, gt_dir=None,
                    **_graph_metrics(nodes, edges, payload["visible_gt"],
                                     full_gt, manifest)}
             summary.append(row)
+            if full_gt is not None and stage in (
+                    "candidate", "fixed_ilp", DEFAULT_POLICY):
+                predicted_rows, gt_rows, localization_rows = (
+                    audit_temporal_edges(
+                        nodes, edges, full_gt, payload["visible_gt"],
+                        manifest, label, stage))
+                predicted_edge_audit.extend(predicted_rows)
+                gt_edge_audit.extend(gt_rows)
+                localization_audit.extend(localization_rows)
     write_rows(output_dir / "summary.csv", tuple(summary[0]), summary)
+    write_rows(output_dir / "predicted_edge_audit.csv", PRED_EDGE_FIELDS,
+               predicted_edge_audit)
+    write_rows(output_dir / "gt_edge_audit.csv", GT_EDGE_FIELDS,
+               gt_edge_audit)
+    write_rows(output_dir / "localization_audit.csv", LOCALIZATION_FIELDS,
+               localization_audit)
     (output_dir / "summary.json").write_text(json.dumps(summary, indent=2),
                                              encoding="utf-8")
     settings = {"source_dir": str(source_dir),
