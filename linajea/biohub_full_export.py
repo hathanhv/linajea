@@ -137,7 +137,7 @@ def predict_full_sequence(image_path, config_path, checkpoint_path, output_dir,
 
 
 def solve_components(nodes, edges, selection_constant, track_cost,
-                     time_limit_per_component=300):
+                     time_limit_per_component=300, first_frame=0):
     """Decompose exact ILP by candidate graph components to limit memory."""
     ids = {int(node["node_id"]): index for index, node in enumerate(nodes)}
     roots = list(range(len(nodes)))
@@ -159,10 +159,20 @@ def solve_components(nodes, edges, selection_constant, track_cost,
         edge_groups[root(ids[int(edge["source_id"])])].append(edge)
     selected_nodes, selected_edges, statuses = [], [], []
     for index, (key, subset) in enumerate(groups.items()):
+        if len(subset) == 1 and not edge_groups[key]:
+            node = subset[0]
+            cost = (selection_constant - 17.0 * float(node["score"]) +
+                    (0.0 if int(node["t"]) == first_frame else track_cost))
+            if cost < 0:
+                selected_nodes.append(node)
+            statuses.append({"solver_status": "analytical_singleton",
+                             "solver_objective": min(cost, 0.0),
+                             "solver_gap": 0.0})
+            continue
         chosen_nodes, chosen_edges, status = solve_basic_ilp(
             subset, edge_groups[key], time_limit=time_limit_per_component,
             selection_constant=selection_constant, track_cost=track_cost,
-            first_frame=0)
+            first_frame=first_frame)
         selected_nodes.extend(chosen_nodes)
         selected_edges.extend(chosen_edges)
         statuses.append(status)

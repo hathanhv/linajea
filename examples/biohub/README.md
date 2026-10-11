@@ -187,3 +187,30 @@ plugin. Open the matching Biohub `.zarr` image separately to overlay tracks.
 This export is a prediction for the **one training sample**; it is not an
 independent test or a Kaggle submission. Full-volume inference is much longer
 than ROI inference and reports progress every five frames.
+
+### Analyze cached predictions before using pseudo-GT
+
+Upload [`pseudo_gt_analysis_kaggle.ipynb`](pseudo_gt_analysis_kaggle.ipynb)
+as a **new Kaggle notebook**. Attach the saved output of the three-seed
+1500-iteration notebook as an Input. The earlier checkpoint-comparison output
+at `checkpoint_comparison/iteration_1500` is also supported. Attach the Biohub
+competition train Input as well to compute held-out metrics and show raw-image
+audit previews; without it, the notebook still compares candidate generation,
+fixed ILP selection, and visible-anchor filtering.
+
+The analysis clones the pushed fork, reuses cached candidate CSVs, and runs no
+training or image inference. All runs are solved with the same ILP costs
+`selection_constant=7` and `track_cost=7`. It reports per-frame candidate counts
+and cap hits, then explores a **predeclared** range of score, movement-residual,
+and gap-length filters. The strict filter retains novel selected cells only on
+paths between two matched visible GT anchors. It is a post-filter: it does not
+force visible GT into the candidate graph, and it must not be interpreted as
+independently validated pseudo-label precision. Original GEFF is opened only
+after the graph policies are fixed, for diagnostic hidden-GT evaluation.
+
+Outputs are saved under `/kaggle/working/biohub_pseudo_analysis/`, including
+`summary.csv`, `candidate_frames.csv`, plots, `audit_queue.csv`, and per-run
+`fixed_ilp/` and `anchored_strict/` CSV graphs. The strict folder also has
+`pseudo_nodes_only.csv` and `anchor_matches.csv` for review. Do not add these
+provisional labels to Biohub training without manual precision checks on
+unmatched predictions and a separate validation-sample retraining comparison.

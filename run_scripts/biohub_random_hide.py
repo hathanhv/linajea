@@ -18,12 +18,16 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--iterations", type=int, default=2000)
     parser.add_argument("--device", choices=("cpu", "cuda"))
-    parser.add_argument("--variant", choices=("original", "calibrated"),
+    parser.add_argument("--variant", choices=("original", "candidate", "calibrated"),
                         default="original", help="Graph to evaluate or plot")
     args = parser.parse_args()
     root = args.output_dir.resolve()
     prediction_dir = root / ("prediction_calibrated" if
                              args.variant == "calibrated" else "prediction")
+    nodes_file = ("candidate_nodes.csv" if args.variant == "candidate"
+                  else "pred_nodes.csv")
+    edges_file = ("candidate_edges.csv" if args.variant == "candidate"
+                  else "pred_edges.csv")
     if args.stage == "split":
         if not 0 < args.hide_rate < 1:
             parser.error("--hide-rate must be between zero and one")
@@ -50,16 +54,16 @@ def main():
         print(json.dumps(result, indent=2))
     elif args.stage == "evaluate":
         result = evaluate(args.data_dir, root / "split.json",
-                          prediction_dir / "pred_nodes.csv",
-                          prediction_dir / "pred_edges.csv",
-                          root / ("evaluation_calibrated" if
-                                  args.variant == "calibrated" else "evaluation"))
+                          prediction_dir / nodes_file,
+                          prediction_dir / edges_file,
+                          root / ("evaluation" if args.variant == "original"
+                                  else f"evaluation_{args.variant}"))
         print(json.dumps(result, indent=2))
     else:
         from linajea.biohub_visualize import plot_comparison
         path = plot_comparison(args.data_dir, root / "split.json",
-                               prediction_dir / "pred_nodes.csv",
-                               prediction_dir / "pred_edges.csv",
+                               prediction_dir / nodes_file,
+                               prediction_dir / edges_file,
                                root / ("plots_calibrated" if
                                        args.variant == "calibrated" else "plots"))
         print("Comparison image:", path)
