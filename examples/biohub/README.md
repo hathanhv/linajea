@@ -97,6 +97,14 @@ needed to assess stability across embryos. The organizer's metric comes from
 [`royerlab/kaggle-cell-tracking-competition`](https://github.com/royerlab/kaggle-cell-tracking-competition),
 pinned to commit `075fc5f5a52d11077f9dc2b074644618f26939e2` in the notebook.
 
+[`train_validate_8x2_reverse_kaggle.ipynb`](train_validate_8x2_reverse_kaggle.ipynb)
+runs the reverse embryo holdout: eight `44b6` samples for training and two
+`6bba` samples for validation. It keeps the same seed, 16,000 iterations,
+checkpoint interval, inference settings, ILP costs, and evaluation code. Its
+outputs go to `/kaggle/working/biohub_holdout_8x2_reverse/` so the first run
+is not overwritten. Set `PINNED_COMMIT` to the commit recorded in the first
+run's `code_commit.txt` when comparing the two directions.
+
 ## Random node hide pilot
 
 Upload [`random_hide_kaggle.ipynb`](random_hide_kaggle.ipynb) to Kaggle after
