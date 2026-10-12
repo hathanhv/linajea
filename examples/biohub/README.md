@@ -96,6 +96,16 @@ embryo direction; a second run with train and validation embryos swapped is
 needed to assess stability across embryos. The organizer's metric comes from
 [`royerlab/kaggle-cell-tracking-competition`](https://github.com/royerlab/kaggle-cell-tracking-competition),
 pinned to commit `075fc5f5a52d11077f9dc2b074644618f26939e2` in the notebook.
+The `summary_7um.csv` table also reports `candidate_node_recall` and
+`candidate_edge_recall` before ILP, beside the selected-graph recall. Each
+graph is matched separately to sparse GT at 7 micrometers. Rerunning the
+validation cell with cached CSV graphs recomputes these metrics without
+retraining or repeating inference.
+For a finished Kaggle session whose CSV outputs are attached as an Input,
+`python -m run_scripts.evaluate_biohub_cached_candidates --data-dir TRAIN \
+--split PREVIOUS_OUTPUT/split.json --prediction-dir PREVIOUS_OUTPUT/validation \
+--output-dir /kaggle/working/candidate_recall` reads only the saved graphs and
+the validation GT. No checkpoint or GPU is required.
 
 [`train_validate_8x2_reverse_kaggle.ipynb`](train_validate_8x2_reverse_kaggle.ipynb)
 runs the reverse embryo holdout: eight `44b6` samples for training and two

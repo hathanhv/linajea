@@ -84,16 +84,48 @@ def main():
             # prediction and graph selection are complete.
             write_predicted_geff(geff_out, selected, selected_edges,
                                  gt_path, image_path)
+        candidate_nodes_path = sample_dir / "candidate_nodes.csv"
+        if not candidate_nodes_path.is_file():
+            raise FileNotFoundError(
+                f"Candidate graph is required for pre-ILP recall: "
+                f"{candidate_nodes_path}")
+        candidate_nodes = read_rows(candidate_nodes_path)
+        candidate_edges_path = sample_dir / "candidate_edges.csv"
+        if candidate_edges_path.is_file():
+            candidate_graph_edges = read_rows(candidate_edges_path)
+        else:
+            candidate_graph_edges = candidate_edges(candidate_nodes)
+            write_rows(candidate_edges_path, EDGE_FIELDS, candidate_graph_edges)
         gt_records, _ = read_geff_tracks(gt_path, image.voxel_size, image.shape)
         metrics = {str(int(radius)): sparse_diagnostics(
             selected, selected_edges, gt_records, radius)
                    for radius in (2.0, 4.0, 7.0)}
+        candidate_metrics = {str(int(radius)): sparse_diagnostics(
+            candidate_nodes, candidate_graph_edges, gt_records, radius)
+                             for radius in (2.0, 4.0, 7.0)}
         (sample_dir / "sparse_diagnostics.json").write_text(
             json.dumps(metrics, indent=2))
+        (sample_dir / "candidate_sparse_diagnostics.json").write_text(
+            json.dumps(candidate_metrics, indent=2))
         at7 = metrics["7"]
-        rows.append({"sample": name, **{key: value for key, value in at7.items()
-                                         if key != "precision_note"}})
-        print(name, "7 um cell", at7["matched_gt_nodes"], "/",
+        candidate_at7 = candidate_metrics["7"]
+        rows.append({
+            "sample": name,
+            "candidate_nodes": len(candidate_nodes),
+            "candidate_edges": len(candidate_graph_edges),
+            "candidate_matched_gt_nodes": candidate_at7["matched_gt_nodes"],
+            "candidate_node_recall": candidate_at7["known_node_recall"],
+            "candidate_matched_gt_edges": candidate_at7["matched_gt_edges"],
+            "candidate_edge_recall": candidate_at7["known_edge_recall"],
+            **{key: value for key, value in at7.items()
+               if key != "precision_note"},
+        })
+        print(name, "7 um candidate cell",
+              candidate_at7["matched_gt_nodes"], "/",
+              candidate_at7["known_gt_nodes"], "candidate edge",
+              candidate_at7["matched_gt_edges"], "/",
+              candidate_at7["known_gt_edges"], "selected cell",
+              at7["matched_gt_nodes"], "/",
               at7["known_gt_nodes"], "edge", at7["matched_gt_edges"], "/",
               at7["known_gt_edges"], flush=True)
     with (output_dir / "summary_7um.csv").open("w", newline="",
