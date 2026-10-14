@@ -115,6 +115,19 @@ outputs go to `/kaggle/working/biohub_holdout_8x2_reverse/` so the first run
 is not overwritten. Set `PINNED_COMMIT` to the commit recorded in the first
 run's `code_commit.txt` when comparing the two directions.
 
+[`oracle_linking_reverse_kaggle.ipynb`](oracle_linking_reverse_kaggle.ipynb)
+reuses the reverse run's split, config, and checkpoint. On the two held-out
+`6bba` samples, it fixes detections to the exact GEFF node centers, samples
+Linajea's movement prediction at those positions, and compares distance
+greedy, movement greedy, distance ILP, and movement ILP. All methods use the
+same temporal candidate pairs within 12 micrometers, with at most one parent
+and two daughters. GEFF edges are used only for evaluation. The notebook
+saves per-sample edge lists, `summary.csv`, `aggregate.csv`, and a plot under
+`/kaggle/working/biohub_oracle_linking_reverse/`. Oracle node recall is 100%
+by construction; this experiment isolates linking and does not measure
+deployment-ready detector performance. Unconfirmed links remain unknown
+because Biohub annotations are sparse.
+
 ## Random node hide pilot
 
 Upload [`random_hide_kaggle.ipynb`](random_hide_kaggle.ipynb) to Kaggle after
