@@ -170,8 +170,12 @@ def candidate_edges(nodes, max_parent_distance_um=12.0, max_parents=3):
 def solve_basic_ilp(nodes, edges, time_limit=300, selection_constant=12.0,
                     weight_node_score=17.0, track_cost=7.0,
                     division_cost=1.0, edge_weight=0.35,
-                    first_frame=None):
-    """Linajea basic binary-forest constraints with configurable costs."""
+                    first_frame=None, force_all_nodes=False):
+    """Linajea basic binary-forest constraints with configurable costs.
+
+    ``force_all_nodes`` pins detections on for oracle-linking experiments.
+    The default retains the ordinary node-and-edge selection behavior.
+    """
     n, m = len(nodes), len(edges)
     if not n:
         return [], [], {"solver_status": "no_candidates"}
@@ -217,8 +221,11 @@ def solve_basic_ilp(nodes, edges, time_limit=300, selection_constant=12.0,
         add(next_edges + [(2 * n + i, -2)], lo=0)
     matrix = coo_matrix((values, (rows, cols)),
                         shape=(len(lower), len(costs))).tocsr()
+    lower_bounds = np.zeros(len(costs))
+    if force_all_nodes:
+        lower_bounds[:n] = 1
     outcome = milp(costs, integrality=np.ones(len(costs)),
-                   bounds=Bounds(np.zeros(len(costs)), np.ones(len(costs))),
+                   bounds=Bounds(lower_bounds, np.ones(len(costs))),
                    constraints=LinearConstraint(matrix, lower, upper),
                    options={"time_limit": time_limit, "mip_rel_gap": 0.05})
     if outcome.x is None:

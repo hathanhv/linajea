@@ -119,9 +119,11 @@ run's `code_commit.txt` when comparing the two directions.
 reuses the reverse run's split, config, and checkpoint. On the two held-out
 `6bba` samples, it fixes detections to the exact GEFF node centers, samples
 Linajea's movement prediction at those positions, and compares distance
-greedy, movement greedy, distance ILP, and movement ILP. All methods use the
-same temporal candidate pairs within 12 micrometers, with at most one parent
-and two daughters. GEFF edges are used only for evaluation. The notebook
+greedy, movement greedy, distance ILP, movement ILP, and `linajea_oracle`.
+The four baselines use the same temporal candidate pairs within 12 micrometers.
+`linajea_oracle` calls the Biohub fork's `candidate_edges` (movement-centered
+parent search, at most three parents per child) and `solve_basic_ilp`, pinning
+all GT nodes on. GEFF edges are used only for evaluation. The notebook
 saves per-sample edge lists, `summary.csv`, `aggregate.csv`, and a plot under
 `/kaggle/working/biohub_oracle_linking_reverse/`. Oracle node recall is 100%
 by construction; this experiment isolates linking and does not measure

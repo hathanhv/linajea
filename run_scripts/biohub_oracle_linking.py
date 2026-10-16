@@ -18,7 +18,9 @@ from scipy.spatial import cKDTree
 
 from linajea.biohub_io import BiohubImage, read_geff_tracks
 from linajea.biohub_random_hide import read_rows, write_rows
-from linajea.biohub_reconstruct import NODE_FIELDS
+from linajea.biohub_reconstruct import (EDGE_FIELDS, NODE_FIELDS,
+                                       candidate_edges as linajea_candidate_edges,
+                                       solve_basic_ilp)
 
 
 SPACING_UM = np.array([1.625, 0.40625, 0.40625])
@@ -327,6 +329,30 @@ def main():
                             "candidate_edges": len(edges),
                             **edge_metrics(chosen, gt_edges, len(nodes), edge_set),
                             **status})
+        # The Biohub fork's production candidate builder uses movement to
+        # center its parent search and keeps at most three parents per child.
+        # Pin all GT nodes in the same basic ILP used for normal reconstruction.
+        native_candidates = linajea_candidate_edges(
+            nodes, max_parent_distance_um=args.max_distance_um)
+        write_rows(sample_dir / "linajea_candidate_edges.csv", EDGE_FIELDS,
+                   native_candidates)
+        selected_nodes, native_chosen, native_status = solve_basic_ilp(
+            nodes, native_candidates, selection_constant=7.0,
+            track_cost=args.appearance_cost,
+            division_cost=args.division_cost,
+            edge_weight=args.edge_weight,
+            first_frame=0, force_all_nodes=True)
+        if len(selected_nodes) != len(nodes):
+            raise AssertionError("Oracle ILP dropped a GT center")
+        write_rows(sample_dir / "linajea_oracle_edges.csv", EDGE_FIELDS,
+                   native_chosen)
+        native_set = {(int(e["source_id"]), int(e["target_id"]))
+                      for e in native_candidates}
+        summary.append({"sample": name, "method": "linajea_oracle",
+                        "candidate_edges": len(native_candidates),
+                        **edge_metrics(native_chosen, gt_edges, len(nodes),
+                                       native_set),
+                        **native_status})
         print(f"Finished {name}: {len(nodes)} oracle centers, "
               f"{len(gt_edges)} known GT edges", flush=True)
     path = args.output_dir / "summary.csv"
